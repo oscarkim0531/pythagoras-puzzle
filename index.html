@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f2ea" />
+    <meta name="description" content="색 조각을 옮겨 피타고라스 정리를 완성하는 퍼즐 게임" />
+    <title>피타고라스 정리 퍼즐</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="start-screen" class="screen start-screen" aria-labelledby="start-title">
+        <div class="intro-art" aria-hidden="true">
+          <span class="intro-square intro-square-small"></span>
+          <span class="intro-square intro-square-large"></span>
+          <span class="intro-triangle"></span>
+        </div>
+        <p class="eyebrow">수학을 손으로 맞춰 보세요</p>
+        <h1 id="start-title">피타고라스<br />정리 퍼즐</h1>
+        <p class="lead">두 정사각형의 조각으로 세 번째 정사각형을 채워 보세요.</p>
+        <button id="start-button" class="primary-button" type="button">시작하기 <span aria-hidden="true">→</span></button>
+        <p class="formula" aria-label="에이 제곱 더하기 비 제곱은 씨 제곱">a² + b² = c²</p>
+      </section>
+
+      <section id="select-screen" class="screen select-screen" aria-labelledby="select-title" hidden>
+        <header class="screen-header">
+          <button id="select-home" class="icon-button" type="button" aria-label="첫 화면으로">←</button>
+          <div>
+            <p class="eyebrow">아홉 가지 조각 맞추기</p>
+            <h2 id="select-title">퍼즐 선택</h2>
+          </div>
+          <span class="header-spacer" aria-hidden="true"></span>
+        </header>
+        <p class="section-note">마음에 드는 조각 구성을 골라 시작하세요.</p>
+        <div class="level-grid" aria-label="퍼즐 목록">
+          <button class="level-card" data-level="0" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 01</span></button>
+          <button class="level-card" data-level="1" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 02</span></button>
+          <button class="level-card" data-level="2" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 03</span></button>
+          <button class="level-card" data-level="3" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 04</span></button>
+          <button class="level-card" data-level="4" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 05</span></button>
+          <button class="level-card" data-level="5" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 06</span></button>
+          <button class="level-card" data-level="6" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 07</span></button>
+          <button class="level-card" data-level="7" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 08</span></button>
+          <button class="level-card" data-level="8" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 09</span></button>
+        </div>
+      </section>
+
+      <section id="game-screen" class="screen game-screen" aria-labelledby="game-title" hidden>
+        <header class="game-toolbar">
+          <div class="toolbar-group">
+            <button id="game-home" class="icon-button" type="button" aria-label="첫 화면으로">←</button>
+            <button id="game-levels" class="icon-button" type="button" aria-label="퍼즐 목록으로">▦</button>
+          </div>
+          <div class="game-heading">
+            <p id="level-number" class="eyebrow">퍼즐 01</p>
+            <h2 id="game-title">피타고라스 정리 퍼즐</h2>
+          </div>
+          <div class="toolbar-group toolbar-right">
+            <span id="timer" class="timer" aria-label="경과 시간">00:00</span>
+            <button id="game-reset" class="icon-button" type="button" aria-label="현재 퍼즐 다시 시작">↻</button>
+          </div>
+        </header>
+        <p class="game-instruction">위의 색 조각을 아래 정사각형으로 끌어 놓으세요. 놓으면 방향이 자동으로 맞춰집니다.</p>
+        <div class="puzzle-wrap">
+          <svg id="puzzle-stage" class="puzzle-stage" viewBox="0 0 1000 700" role="img" aria-label="두 정사각형의 색 조각을 아래 빈 정사각형에 옮기는 퍼즐"></svg>
+        </div>
+        <p class="game-footnote">배치한 조각을 누르면 원래 위치로 돌아갑니다.</p>
+        <p id="game-status" class="sr-only" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <dialog id="name-dialog" class="app-dialog" aria-labelledby="name-title">
+      <form id="name-form" method="dialog">
+        <p class="eyebrow">퍼즐을 시작하기 전에</p>
+        <h2 id="name-title">이름을 입력하세요</h2>
+        <p class="dialog-copy">결과 화면에 표시할 이름입니다. 별도로 저장하지 않습니다.</p>
+        <label class="field-label" for="player-name">이름</label>
+        <input id="player-name" name="playerName" type="text" maxlength="10" autocomplete="off" placeholder="이름을 입력하세요" required />
+        <p class="field-help">한글, 영어, 숫자를 합쳐 최대 10자</p>
+        <div class="dialog-actions">
+          <button id="name-cancel" class="secondary-button" type="button">취소</button>
+          <button class="primary-button" type="submit">확인</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="app-dialog" aria-labelledby="confirm-title">
+      <h2 id="confirm-title">이동하시겠습니까?</h2>
+      <p id="confirm-copy" class="dialog-copy"></p>
+      <div class="dialog-actions">
+        <button id="confirm-cancel" class="secondary-button" type="button">취소</button>
+        <button id="confirm-accept" class="primary-button" type="button">이동</button>
+      </div>
+    </dialog>
+
+    <dialog id="result-dialog" class="app-dialog result-dialog" aria-labelledby="result-title">
+      <p class="result-symbol" aria-hidden="true">✓</p>
+      <h2 id="result-title">퍼즐 완성!</h2>
+      <p id="result-copy" class="dialog-copy"></p>
+      <p class="result-equation">a² + b² = c²</p>
+      <div class="dialog-actions">
+        <button id="result-levels" class="secondary-button" type="button">다른 퍼즐</button>
+        <button id="result-replay" class="primary-button" type="button">다시 하기</button>
+      </div>
+    </dialog>
+  </body>
+</html>
