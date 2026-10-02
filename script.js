@@ -27,6 +27,74 @@ const PALETTES = [
   ['#85bbed', '#a1d77f', '#efa46d', '#f4d16b', '#e8775f', '#c5a7dc', '#7fc9c7', '#eeb783'],
 ];
 
+// Nine additional dissections. Each cut is carried rigidly from a source square
+// into its matching part of the 5 x 5 square, so every polygon keeps its shape.
+const POLYGON_PALETTES = [
+  ['#ff9a4d', '#ff9a4d', '#ff9a4d', '#ff9a4d', '#b7f36b', '#ffe05b', '#3299ed', '#72dbed'],
+  ['#ffe05b', '#ffe05b', '#ffe05b', '#ffe05b', '#6ed4ed', '#f5c7ec', '#f2a8df', '#8bdded'],
+  ['#ff9b55', '#36bb59', '#ff9b55', '#36bb59', '#ff3b12', '#ffe05b', '#3299ed', '#ffe05b'],
+  ['#74dced', '#ffa05d', '#74dced', '#ffa05d', '#348deb', '#ffe05b', '#a5ed72', '#f2a3dd'],
+  ['#ee8dc9', '#ffe05b', '#ff9b54', '#ff3b12', '#a5ee6c', '#74dced', '#328eed', '#32bd60'],
+  ['#ff9b54', '#ffe05b', '#ff9b54', '#ffe05b', '#ff3b12', '#328eed', '#eda2da', '#a7ec6e'],
+  ['#b3ef72', '#348fed', '#b3ef72', '#348fed', '#ffe05b', '#ffaf77', '#ff3b12', '#37be63'],
+  ['#b5ef75', '#35ba60', '#328eed', '#73ddec', '#ff3b12', '#ff9b54', '#ffe05b', '#ff9b54'],
+  ['#348fed', '#b2ef70', '#ff9b54', '#36bd62', '#ff2517', '#f5c5e7', '#ffe05b', '#ff9b54'],
+];
+const POLYGON_CUTS = [
+  ['solid', 'solid', 'solid', 'solid', 'fan', 'diagonal', 'diagonal'],
+  ['solid', 'solid', 'solid', 'solid', 'fan', 'fan', 'diagonal'],
+  ['diagonal', 'solid', 'diagonal', 'solid', 'diagonal', 'corner', 'diagonal'],
+  ['diagonal', 'diagonal', 'solid', 'solid', 'fan', 'corner', 'diagonal'],
+  ['diagonal', 'diagonal', 'diagonal', 'diagonal', 'fan', 'diagonal', 'corner'],
+  ['diagonal', 'diagonal', 'diagonal', 'solid', 'corner', 'fan', 'diagonal'],
+  ['band', 'diagonal', 'solid', 'diagonal', 'corner', 'band', 'diagonal'],
+  ['fan', 'diagonal', 'band', 'solid', 'diagonal', 'corner', 'band'],
+  ['corner', 'band', 'diagonal', 'solid', 'diagonal', 'band', 'corner', 'diagonal'],
+];
+
+function splitRectangle(width, height, type) {
+  const w = width;
+  const h = height;
+  if (type === 'solid') return [[[0, 0], [w, 0], [w, h], [0, h]]];
+  if (type === 'diagonal') return [
+    [[0, 0], [w, 0], [w, h]], [[0, 0], [w, h], [0, h]],
+  ];
+  if (type === 'fan') {
+    const center = [w / 2, h / 2];
+    return [
+      [[0, 0], [w, 0], center], [[w, 0], [w, h], center],
+      [[w, h], [0, h], center], [[0, h], [0, 0], center],
+    ];
+  }
+  if (type === 'corner') return [
+    [[0, 0], [w, 0], [w, h * .42]],
+    [[0, 0], [w, h * .42], [w, h], [0, h]],
+  ];
+  return [
+    [[0, 0], [w, 0], [w, h * .32], [0, h * .67]],
+    [[0, h * .67], [w, h * .32], [w, h], [0, h]],
+  ];
+}
+
+function makePolygonPieces(index) {
+  const cuts = [...SMALL_CUT, ...LARGE_CUTS[index]];
+  const colors = POLYGON_PALETTES[index];
+  return cuts.flatMap(([x, y, width, height], cutIndex) => {
+    const board = cutIndex < 4 ? 'small' : 'large';
+    return splitRectangle(width, height, POLYGON_CUTS[index][cutIndex]).map((polygon, part) => {
+      const source = polygon.map(([u, v]) => [x + u, y + v]);
+      let target;
+      if (board === 'large') target = source;
+      else if (cutIndex === 0) target = polygon.map(([u, v]) => [u, 4 + v]);
+      else if (cutIndex === 1) target = polygon.map(([u, v]) => [5 - v, u]);
+      else if (cutIndex === 2) target = polygon.map(([u, v]) => [5 - v, 3 + u]);
+      else target = polygon.map(([u, v]) => [3 + u, 4 + v]);
+      return { id: `p${cutIndex}-${part}`, board, polygon: source, targetPolygon: target,
+        color: colors[(cutIndex + part) % colors.length], seamless: index < 2 && board === 'small' };
+    });
+  });
+}
+
 const $ = (selector) => document.querySelector(selector);
 const screens = { start: $('#start-screen'), select: $('#select-screen'), game: $('#game-screen') };
 const stage = $('#puzzle-stage');
@@ -71,6 +139,7 @@ function turnCells(cells, size, turns) {
 }
 
 function makePieces(level) {
+  if (level >= 9) return makePolygonPieces(level - 9);
   const palette = PALETTES[level];
   const smallTurns = level % 4;
   const small = SMALL_CUT.map((cut, index) => ({
@@ -123,6 +192,26 @@ function pathForCells(cells, point) {
     paths.push(`M ${points.map(([x, y]) => point(x, y).join(' ')).join(' L ')} Z`);
   }
   return paths.join(' ');
+}
+
+function pathForPolygon(vertices, point) {
+  return `M ${vertices.map(([x, y]) => point(x, y).join(' ')).join(' L ')} Z`;
+}
+
+function polygonCenter(vertices, point) {
+  const positions = vertices.map(([x, y]) => point(x, y));
+  let twiceArea = 0;
+  let centerX = 0;
+  let centerY = 0;
+  for (let index = 0; index < positions.length; index += 1) {
+    const [x1, y1] = positions[index];
+    const [x2, y2] = positions[(index + 1) % positions.length];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    centerX += (x1 + x2) * cross;
+    centerY += (y1 + y2) * cross;
+  }
+  return { x: centerX / (3 * twiceArea), y: centerY / (3 * twiceArea) };
 }
 
 function geometry() {
@@ -204,10 +293,14 @@ function drawDiagram(svg, layout) {
 
 function sourcePath(piece, layout) {
   const board = layout[piece.board];
+  if (piece.polygon) return pathForPolygon(piece.polygon, (x, y) => boardPoint(board, x, y));
   return pathForCells(piece.cells, (x, y) => boardPoint(board, x, y));
 }
 
 function targetPath(piece, placement, target) {
+  if (piece.targetPolygon) {
+    return pathForPolygon(piece.targetPolygon, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
+  }
   const cells = rotatedShape(piece.cells, placement.turns).map(([x, y]) => [x + placement.x, y + placement.y]);
   return pathForCells(cells, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
 }
@@ -225,7 +318,10 @@ function renderStage() {
   for (const piece of state.pieces) {
     if (state.placements.has(piece.id)) continue;
     const group = svgElement('g', { class: 'source-piece', 'data-piece': piece.id });
-    group.append(svgElement('path', { d: sourcePath(piece, layout), fill: piece.color }));
+    group.append(svgElement('path', {
+      d: sourcePath(piece, layout), fill: piece.color,
+      ...(piece.seamless ? { style: `stroke: ${piece.color}` } : {}),
+    }));
     stage.append(group);
   }
 
@@ -261,13 +357,26 @@ function occupiedCells() {
   for (const piece of state.pieces) {
     const placed = state.placements.get(piece.id);
     if (!placed) continue;
-    for (const [x, y] of rotatedShape(piece.cells, placed.turns)) used.add(`${x + placed.x},${y + placed.y}`);
+    if (piece.cells) {
+      for (const [x, y] of rotatedShape(piece.cells, placed.turns)) used.add(`${x + placed.x},${y + placed.y}`);
+    }
   }
   return used;
 }
 
-function findPlacement(piece, point) {
+function findPlacement(piece, point, drag = null) {
   const target = geometry().target;
+  if (piece.targetPolygon) {
+    const desired = polygonCenter(piece.targetPolygon, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
+    const moving = drag
+      ? { x: drag.center.x + point.x - drag.start.x, y: drag.center.y + point.y - drag.start.y }
+      : point;
+    const distance = Math.hypot(desired.x - moving.x, desired.y - moving.y);
+    const edgeX = Math.max(target.x - moving.x, 0, moving.x - target.x - 5 * target.cell);
+    const edgeY = Math.max(target.y - moving.y, 0, moving.y - target.y - 5 * target.cell);
+    const nearSquare = Math.hypot(edgeX, edgeY) <= target.cell * .55;
+    return nearSquare || distance <= target.cell * 1.9 ? { distance } : null;
+  }
   const used = occupiedCells();
   let closest = null;
   for (let turns = 0; turns < 2; turns += 1) {
@@ -292,6 +401,12 @@ function drawPreview(piece, placement) {
   preview.replaceChildren();
   if (!placement) return;
   const target = geometry().target;
+  if (piece.targetPolygon) {
+    preview.append(svgElement('path', {
+      d: targetPath(piece, placement, target), fill: piece.color, class: 'preview-polygon',
+    }));
+    return;
+  }
   for (const [x, y] of rotatedShape(piece.cells, placement.turns)) {
     preview.append(svgElement('rect', {
       x: target.x + (placement.x + x) * target.cell,
@@ -337,7 +452,9 @@ function beginLevel(level) {
   state.seconds = 0;
   state.paused = false;
   updateTimer();
-  $('#level-number').textContent = `퍼즐 ${String(level + 1).padStart(2, '0')}`;
+  $('#level-number').textContent = level >= 9
+    ? `다각형 퍼즐 ${String(level - 8).padStart(2, '0')}`
+    : `기존 퍼즐 ${String(level + 1).padStart(2, '0')}`;
   showScreen('game');
   startClock();
   status.textContent = '퍼즐을 시작했습니다. 색 조각을 아래 정사각형으로 옮겨 주세요.';
@@ -345,7 +462,7 @@ function beginLevel(level) {
 
 function finishIfComplete() {
   if (state.placements.size !== state.pieces.length) return;
-  if (occupiedCells().size !== 25) return;
+  if (state.level < 9 && occupiedCells().size !== 25) return;
   stopClock();
   state.paused = true;
   $('#result-copy').textContent = `${state.name}님, ${$('#timer').textContent} 만에 정사각형을 완성했어요.`;
@@ -378,8 +495,10 @@ function drawGallery() {
     for (const piece of makePieces(level)) {
       const board = piece.board === 'small' ? small : large;
       svg.append(svgElement('path', {
-        d: pathForCells(piece.cells, (x, y) => boardPoint(board, x, y)),
-        fill: piece.color, stroke: '#fffdf8', 'stroke-width': 2,
+        d: piece.polygon
+          ? pathForPolygon(piece.polygon, (x, y) => boardPoint(board, x, y))
+          : pathForCells(piece.cells, (x, y) => boardPoint(board, x, y)),
+        fill: piece.color, stroke: piece.seamless ? piece.color : '#fffdf8', 'stroke-width': 2,
       }));
     }
     svg.append(svgElement('path', { d: 'M 111 65 L 132 65 M 123 57 L 132 65 L 123 73', fill: 'none', stroke: '#aeb7c6', 'stroke-width': 2 }));
@@ -401,7 +520,11 @@ stage.addEventListener('pointerdown', (event) => {
   if (!source) return;
   const piece = state.pieces.find((item) => item.id === source.dataset.piece);
   const point = pointInStage(event);
-  state.dragging = { piece, element: source, start: point, moved: false, pointerId: event.pointerId };
+  const layout = geometry();
+  const center = piece.polygon
+    ? polygonCenter(piece.polygon, (x, y) => boardPoint(layout[piece.board], x, y))
+    : null;
+  state.dragging = { piece, element: source, start: point, center, moved: false, pointerId: event.pointerId };
   source.classList.add('is-dragging');
   stage.setPointerCapture(event.pointerId);
   event.preventDefault();
@@ -415,7 +538,9 @@ stage.addEventListener('pointermove', (event) => {
   const dy = point.y - drag.start.y;
   if (Math.hypot(dx, dy) > 5) drag.moved = true;
   drag.element.setAttribute('transform', `translate(${dx} ${dy})`);
-  drawPreview(drag.piece, findPlacement(drag.piece, point));
+  const placement = findPlacement(drag.piece, point, drag);
+  drag.element.classList.toggle('near-target', Boolean(placement && drag.piece.polygon));
+  drawPreview(drag.piece, placement);
 });
 
 function endDrag(event) {
@@ -423,7 +548,7 @@ function endDrag(event) {
   if (!drag || drag.pointerId !== event.pointerId) return;
   state.dragging = null;
   if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
-  const placement = drag.moved && event.type !== 'pointercancel' ? findPlacement(drag.piece, pointInStage(event)) : null;
+  const placement = drag.moved && event.type !== 'pointercancel' ? findPlacement(drag.piece, pointInStage(event), drag) : null;
   if (placement) {
     state.placements.set(drag.piece.id, { x: placement.x, y: placement.y, turns: placement.turns });
     status.textContent = `조각을 놓았습니다. ${state.placements.size}개 배치했습니다.`;

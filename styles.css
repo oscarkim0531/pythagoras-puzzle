@@ -78,6 +78,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .screen-header { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 18px; text-align: center; }
 .screen-header h2 { margin: 3px 0 0; font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -.06em; }
 .section-note { text-align: center; color: var(--muted); margin: 16px 0 30px; }
+.level-group-title { margin: 0 0 14px; color: var(--blue); font-size: 1.08rem; letter-spacing: -.04em; }
+.older-levels { margin-top: 36px; }
 .icon-button { display: inline-grid; place-items: center; width: 48px; height: 48px; border: 1px solid #edcaa9; border-radius: 12px; background: #fff6ea; color: var(--orange-dark); font-size: 1.65rem; font-weight: 700; line-height: 1; box-shadow: 0 3px 0 #f1dbc6; }
 .icon-button:hover { background: #ffe8d0; }
 .level-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
@@ -104,11 +106,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .puzzle-stage { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
 .source-piece { cursor: grab; filter: drop-shadow(0 2px 1px #39342e2b); }
 .source-piece:active, .source-piece.is-dragging { cursor: grabbing; filter: drop-shadow(0 10px 7px #39342e4a); }
+.source-piece.near-target { opacity: .28; }
 .source-piece path { stroke: #fffdf8; stroke-width: 3; stroke-linejoin: round; }
 .placed-piece { cursor: pointer; }
 .placed-piece path { stroke: #fffdf8; stroke-width: 3; stroke-linejoin: round; }
 .target-cell { fill: #f8f6f1; stroke: #ded9d0; stroke-width: 1; }
 .preview-cell { fill: #7a92ca66; stroke: #5268b3; stroke-width: 2; }
+.preview-polygon { opacity: .82; stroke: #5268b3; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 2px 5px #5268b377); }
 
 .app-dialog { width: min(430px, calc(100% - 28px)); max-height: calc(100svh - 28px); overflow: auto; padding: 30px; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 24px 70px #20202a3d; color: var(--ink); background: var(--paper); }
 .app-dialog::backdrop { background: #1d26317a; backdrop-filter: blur(3px); }
@@ -134,6 +138,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
   .level-art { aspect-ratio: 1.15 / 1; }
   .level-label { margin-top: 7px; font-size: .75rem; }
   .section-note { margin: 13px 0 22px; font-size: .86rem; }
+  .level-group-title { margin-bottom: 10px; padding-left: 3px; font-size: .95rem; }
+  .older-levels { margin-top: 27px; }
   .game-toolbar { grid-template-columns: auto 1fr auto; padding: 10px 9px; gap: 5px; }
   .toolbar-group { gap: 5px; }
   .game-toolbar .icon-button { width: 35px; height: 35px; border-radius: 8px; font-size: 1.16rem; }
