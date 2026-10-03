@@ -35,9 +35,9 @@ def wait_for_public_config(api, timeout=180):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            with urlopen(f'{PUBLIC_CONFIG}?t={time.time_ns()}', timeout=8) as response:
-                if json.load(response).get('api') == api:
-                    return True
+            result = subprocess.run(['curl', '-fsS', '--max-time', '8', f'{PUBLIC_CONFIG}?t={time.time_ns()}'], capture_output=True, text=True, check=True)
+            if json.loads(result.stdout).get('api') == api:
+                return True
         except Exception:
             pass
         time.sleep(4)
