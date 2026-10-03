@@ -116,15 +116,15 @@ class Handler(BaseHTTPRequestHandler):
         row = db.execute('SELECT * FROM sessions WHERE token_hash=? AND expires_at>?', (digest(header[7:]), int(time.time()))).fetchone()
         return row
 
-    def throttle(self, key):
+    def too_many_failures(self, key):
         now = time.monotonic()
         hits = RATE[(self.client_address[0], key)]
         while hits and now - hits[0] > 300:
             hits.popleft()
-        if len(hits) >= 10:
-            return False
-        hits.append(now)
-        return True
+        return len(hits) >= 20
+
+    def record_failure(self, key):
+        RATE[(self.client_address[0], key)].append(time.monotonic())
 
     def api(self, method, path, data):
         with connect() as db:
@@ -136,10 +136,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(200, {'role': None})
                 return self.reply(200, {'role': user['role'], 'name': user['name'], 'code': classroom['code'] if classroom else None})
             if path == '/api/teacher/login' and method == 'POST':
-                if not self.throttle('teacher'):
+                if self.too_many_failures('teacher'):
                     return self.fail(429, '시도 횟수가 많습니다. 5분 뒤 다시 시도해 주세요.')
                 password = data.get('password', '')
                 if not isinstance(password, str) or not hmac.compare_digest(hashlib.pbkdf2_hmac('sha256', password.encode(), SALT, 200000), TEACHER_HASH):
+                    self.record_failure('teacher')
                     return self.fail(401, '패스워드가 일치하지 않습니다.')
                 return self.reply(200, {'token': issue(db, 'teacher'), 'code': classroom['code'] if classroom else None})
             if path == '/api/teacher/code' and method == 'POST':
@@ -161,10 +162,11 @@ class Handler(BaseHTTPRequestHandler):
                 rows = db.execute("SELECT name FROM sessions WHERE role='student' AND generation=? AND expires_at>? AND last_seen>=? ORDER BY last_seen DESC", (classroom['generation'], int(time.time()), cutoff)).fetchall()
                 return self.reply(200, {'code': classroom['code'], 'students': [{'name': row['name']} for row in rows]})
             if path == '/api/student/code' and method == 'POST':
-                if not self.throttle('student'):
+                if self.too_many_failures('student'):
                     return self.fail(429, '시도 횟수가 많습니다. 5분 뒤 다시 시도해 주세요.')
                 code = data.get('code')
                 if not classroom or not isinstance(code, str) or not hmac.compare_digest(code, classroom['code']):
+                    self.record_failure('student')
                     return self.fail(401, '수업 코드가 일치하지 않습니다.')
                 return self.reply(200, {'token': issue(db, 'pending', classroom['generation'])})
             if path == '/api/student/join' and method == 'POST':
