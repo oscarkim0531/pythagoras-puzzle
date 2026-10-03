@@ -28,9 +28,8 @@ const PALETTES = [
 ];
 
 const $ = (selector) => document.querySelector(selector);
-const screens = { start: $('#start-screen'), select: $('#select-screen'), game: $('#game-screen') };
+const screens = { start: $('#start-screen'), teacherLogin: $('#teacher-login-screen'), teacherCode: $('#teacher-code-screen'), teacherDashboard: $('#teacher-dashboard-screen'), studentCode: $('#student-code-screen'), studentName: $('#student-name-screen'), select: $('#select-screen'), game: $('#game-screen') };
 const stage = $('#puzzle-stage');
-const nameDialog = $('#name-dialog');
 const confirmDialog = $('#confirm-dialog');
 const resultDialog = $('#result-dialog');
 const status = $('#game-status');
@@ -566,33 +565,11 @@ function endDrag(event) {
 stage.addEventListener('pointerup', endDrag);
 stage.addEventListener('pointercancel', endDrag);
 
-$('#start-button').addEventListener('click', () => showScreen('select'));
-$('#select-home').addEventListener('click', () => showScreen('start'));
 document.querySelectorAll('.level-card').forEach((card) => card.addEventListener('click', () => {
-  state.level = Number(card.dataset.level);
-  $('#player-name').value = state.name;
-  nameDialog.showModal();
-  $('#player-name').focus();
+  if (!window.Classroom?.isStudent()) return;
+  beginLevel(Number(card.dataset.level));
 }));
-
-$('#name-cancel').addEventListener('click', () => nameDialog.close());
-$('#name-form').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const input = $('#player-name');
-  const name = input.value.trim();
-  if (!/^[\p{Script=Hangul}A-Za-z0-9]{1,10}$/u.test(name)) {
-    input.setCustomValidity('한글, 영어, 숫자로 10자 이내로 입력해 주세요.');
-    input.reportValidity();
-    return;
-  }
-  input.setCustomValidity('');
-  state.name = name;
-  nameDialog.close();
-  beginLevel(state.level);
-});
-$('#player-name').addEventListener('input', (event) => event.target.setCustomValidity(''));
-
-$('#game-home').addEventListener('click', () => askConfirmation('첫 화면으로 이동하면 현재 퍼즐 진행 상황이 초기화됩니다.', '이동', () => showScreen('start')));
+$('#game-home').addEventListener('click', () => askConfirmation('퍼즐 목록으로 돌아가면 현재 퍼즐 진행 상황이 초기화됩니다.', '이동', () => showScreen('select')));
 $('#game-levels').addEventListener('click', () => askConfirmation('퍼즐 목록으로 돌아가면 현재 퍼즐 진행 상황이 초기화됩니다.', '이동', () => showScreen('select')));
 $('#game-reset').addEventListener('click', () => askConfirmation('현재 퍼즐의 조각과 시간을 처음부터 다시 시작합니다.', '다시 시작', () => beginLevel(state.level)));
 $('#confirm-cancel').addEventListener('click', () => closeConfirmation(false));
@@ -614,3 +591,4 @@ window.addEventListener('resize', () => {
 
 drawGallery();
 updateTimer();
+window.PuzzleGame = { showScreen, setStudentName(name) { state.name = name; }, currentScreen() { return Object.entries(screens).find(([, element]) => !element.hidden)?.[0]; } };

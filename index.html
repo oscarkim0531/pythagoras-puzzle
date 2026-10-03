@@ -6,9 +6,11 @@
     <meta name="theme-color" content="#f6f2ea" />
     <meta name="description" content="색 조각을 옮겨 피타고라스 정리를 완성하는 퍼즐 게임" />
     <title>피타고라스 정리 퍼즐</title>
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
     <script src="ebs-levels.js?v=6" defer></script>
-    <script src="script.js?v=6" defer></script>
+    <script src="script.js?v=7" defer></script>
+    <script src="classroom-config.js?v=7" defer></script>
+    <script src="classroom.js?v=7" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -19,17 +21,50 @@
           <span class="intro-triangle"></span>
         </div>
         <p class="eyebrow">수학을 손으로 맞춰 보세요</p>
-        <h1 id="start-title">피타고라스<br />정리 퍼즐</h1>
+        <h1 id="start-title">피타고라스 정리 퍼즐</h1>
         <p class="lead">두 정사각형의 조각으로 세 번째 정사각형을 채워 보세요.</p>
-        <button id="start-button" class="primary-button" type="button">시작하기 <span aria-hidden="true">→</span></button>
+        <div class="role-actions"><button id="teacher-button" class="secondary-button" type="button">선생님</button><button id="student-button" class="primary-button" type="button">학생</button></div>
         <p class="formula" aria-label="에이 제곱 더하기 비 제곱은 씨 제곱">a² + b² = c²</p>
+      </section>
+
+      <section id="teacher-login-screen" class="screen access-screen" aria-labelledby="teacher-login-title" hidden>
+        <button class="icon-button access-back" data-back="start" type="button" aria-label="처음으로">←</button>
+        <p class="eyebrow">선생님</p><h2 id="teacher-login-title">선생님 입장</h2>
+        <form id="teacher-login-form" class="access-form"><label for="teacher-password">패스워드</label><input id="teacher-password" type="password" autocomplete="current-password" required /><p id="teacher-login-error" class="form-error" role="alert"></p><button class="primary-button" type="submit">확인</button></form>
+      </section>
+
+      <section id="teacher-code-screen" class="screen access-screen" aria-labelledby="teacher-code-title" hidden>
+        <button id="teacher-code-logout" class="icon-button access-back" type="button" aria-label="로그아웃">←</button>
+        <p class="eyebrow">수업 준비</p><h2 id="teacher-code-title">수업을 위한 숫자 네자리 코드를 생성해 주세요.</h2>
+        <form id="teacher-code-form" class="access-form"><label for="teacher-code">수업 코드</label><input id="teacher-code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="0000" required /><p id="teacher-code-error" class="form-error" role="alert"></p><button class="primary-button" type="submit">수업 시작</button></form>
+      </section>
+
+      <section id="teacher-dashboard-screen" class="screen dashboard-screen" aria-labelledby="dashboard-title" hidden>
+        <header class="dashboard-header"><div><p class="eyebrow">선생님 화면</p><h2 id="dashboard-title">수업 접속 명단</h2></div><div class="dashboard-actions"><button id="change-code" class="secondary-button" type="button">새 수업 코드</button><button id="teacher-logout" class="secondary-button" type="button">로그아웃</button></div></header>
+        <div class="class-code-card"><span>현재 수업 코드</span><strong id="dashboard-code">0000</strong></div>
+        <p id="student-count" class="section-note" aria-live="polite">접속한 학생 0명</p>
+        <ul id="student-roster" class="roster-list" aria-live="polite"></ul>
+        <p id="roster-empty" class="empty-roster">학생이 코드를 입력하고 입장하면 이곳에 학번과 이름이 표시됩니다.</p>
+        <p id="dashboard-error" class="form-error" role="alert"></p>
+      </section>
+
+      <section id="student-code-screen" class="screen access-screen" aria-labelledby="student-code-title" hidden>
+        <button class="icon-button access-back" data-back="start" type="button" aria-label="처음으로">←</button>
+        <p class="eyebrow">학생</p><h2 id="student-code-title">수업 코드를 입력해 주세요</h2>
+        <form id="student-code-form" class="access-form"><label for="student-code">네 자리 숫자 코드</label><input id="student-code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="0000" required /><p id="student-code-error" class="form-error" role="alert"></p><button class="primary-button" type="submit">다음</button></form>
+      </section>
+
+      <section id="student-name-screen" class="screen access-screen" aria-labelledby="student-name-title" hidden>
+        <button class="icon-button access-back" data-back="studentCode" type="button" aria-label="코드 입력으로">←</button>
+        <p class="eyebrow">학생 정보</p><h2 id="student-name-title">학번과 이름을 입력해주세요.<br />예) 20101 김대청</h2>
+        <form id="student-name-form" class="access-form"><label for="student-name">학번과 이름</label><input id="student-name" type="text" maxlength="60" autocomplete="name" placeholder="20101 김대청" required /><p id="student-name-error" class="form-error" role="alert"></p><button class="primary-button" type="submit">확인</button></form>
       </section>
 
       <section id="select-screen" class="screen select-screen" aria-labelledby="select-title" hidden>
         <header class="screen-header">
           <button id="select-home" class="icon-button" type="button" aria-label="첫 화면으로">←</button>
           <div>
-            <p class="eyebrow">열여덟 가지 조각 맞추기</p>
+            <p class="eyebrow">아홉 가지 조각 맞추기</p>
             <h2 id="select-title">퍼즐 선택</h2>
           </div>
           <span class="header-spacer" aria-hidden="true"></span>
@@ -47,8 +82,8 @@
           <button class="level-card" data-level="16" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">다각형 08</span></button>
           <button class="level-card" data-level="17" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">다각형 09</span></button>
         </div>
-        <h3 class="level-group-title older-levels">기존 퍼즐</h3>
-        <div class="level-grid" aria-label="기존 퍼즐 목록">
+        <h3 class="level-group-title older-levels" hidden>기존 퍼즐</h3>
+        <div class="level-grid" aria-label="기존 퍼즐 목록" hidden>
           <button class="level-card" data-level="0" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 01</span></button>
           <button class="level-card" data-level="1" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 02</span></button>
           <button class="level-card" data-level="2" type="button"><span class="level-art" aria-hidden="true"></span><span class="level-label">퍼즐 03</span></button>
@@ -84,21 +119,6 @@
         <p id="game-status" class="sr-only" aria-live="polite"></p>
       </section>
     </main>
-
-    <dialog id="name-dialog" class="app-dialog" aria-labelledby="name-title">
-      <form id="name-form" method="dialog">
-        <p class="eyebrow">퍼즐을 시작하기 전에</p>
-        <h2 id="name-title">이름을 입력하세요</h2>
-        <p class="dialog-copy">결과 화면에 표시할 이름입니다. 별도로 저장하지 않습니다.</p>
-        <label class="field-label" for="player-name">이름</label>
-        <input id="player-name" name="playerName" type="text" maxlength="10" autocomplete="off" placeholder="이름을 입력하세요" required />
-        <p class="field-help">한글, 영어, 숫자를 합쳐 최대 10자</p>
-        <div class="dialog-actions">
-          <button id="name-cancel" class="secondary-button" type="button">취소</button>
-          <button class="primary-button" type="submit">확인</button>
-        </div>
-      </form>
-    </dialog>
 
     <dialog id="confirm-dialog" class="app-dialog" aria-labelledby="confirm-title">
       <h2 id="confirm-title">이동하시겠습니까?</h2>
