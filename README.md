@@ -8,11 +8,11 @@
 python3 server.py
 ```
 
-브라우저에서 `http://localhost:8000`을 엽니다. Python 표준 라이브러리만 사용합니다. 수업 정보는 `data/classroom.sqlite3`에 저장되고 Git에는 포함되지 않습니다. 두 개의 브라우저 탭에서 각각 선생님과 학생으로 입장해 시험할 수 있습니다.
+브라우저에서 `http://localhost:8000`을 엽니다. Python 표준 라이브러리만 사용합니다. 수업 정보는 `data/classroom.json` 파일에 저장되고 Git에는 포함되지 않습니다. 파일은 임시 파일을 쓴 뒤 원자적으로 교체해 저장합니다. 두 개의 브라우저 탭에서 각각 선생님과 학생으로 입장해 시험할 수 있습니다.
 
 ## 기존 GitHub Pages 주소로 공개하기
 
-GitHub Pages에서는 Python 서버나 SQLite 파일을 실행할 수 없습니다. **기존 Pages 주소에는 HTML·CSS·JavaScript를 그대로 게시하고, `server.py`는 HTTPS와 영구 저장소가 있는 별도 서버에 배포**해야 합니다. 서버의 `PUZZLE_DB_PATH`를 영구 볼륨 안의 `.sqlite3` 경로로 지정하세요. `PUZZLE_FRONTEND_ORIGIN`은 기본값인 `https://oscarkim0531.github.io`이며, GitHub Pages 주소가 달라지면 정확한 origin으로 바꾸세요.
+GitHub Pages에서는 Python 서버를 실행하거나 방문자들이 공유하는 JSON 파일을 수정할 수 없습니다. **기존 Pages 주소에는 HTML·CSS·JavaScript를 그대로 게시하고, `server.py`는 HTTPS와 영구 저장소가 있는 별도 서버에 배포**해야 합니다. 서버의 `PUZZLE_STATE_PATH`를 영구 저장소 안의 `classroom.json` 경로로 지정하세요. `PUZZLE_FRONTEND_ORIGIN`은 기본값인 `https://oscarkim0531.github.io`이며, GitHub Pages 주소가 달라지면 정확한 origin으로 바꾸세요.
 
 서버 URL이 정해지면 `classroom-config.js`의 `window.CLASSROOM_API_URL`에 해당 HTTPS 주소를 입력해 GitHub Pages에 게시합니다. 예: `window.CLASSROOM_API_URL = 'https://your-server.example';`. 이 설정 전에는 Pages 화면에서 수업 서버에 접속할 수 없습니다. 배포 서버는 `PORT` 환경변수로 포트를 지정할 수 있으며, `/health`로 상태를 확인할 수 있습니다.
 
@@ -25,4 +25,4 @@ GitHub Pages에서는 Python 서버나 SQLite 파일을 실행할 수 없습니�
 - `ebs-levels.js`: 9개 다각형 퍼즐의 조각과 목표 좌표
 - `script.js`: 퍼즐 조작·판정
 - `classroom.js`: 교사·학생 입장과 명단 갱신
-- `server.py`: 인증, 수업 코드, SQLite 저장 및 로컬 정적 파일 제공
+- `server.py`: 인증, 수업 코드, JSON 파일 저장 및 로컬 정적 파일 제공

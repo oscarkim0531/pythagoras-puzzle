@@ -1,4 +1,4 @@
-"""Small SQLite classroom API and local static server for the puzzle."""
+"""File-backed classroom API and local static server for the puzzle."""
 from __future__ import annotations
 
 import hashlib
@@ -8,41 +8,71 @@ import mimetypes
 import os
 import re
 import secrets
-import sqlite3
+import tempfile
 import time
 from collections import defaultdict, deque
+from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import RLock
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get('PUZZLE_DB_PATH', ROOT / 'data' / 'classroom.sqlite3'))
+STATE_PATH = Path(os.environ.get('PUZZLE_STATE_PATH', ROOT / 'data' / 'classroom.json'))
 FRONTEND_ORIGIN = os.environ.get('PUZZLE_FRONTEND_ORIGIN', 'https://oscarkim0531.github.io').rstrip('/')
 TEACHER_HASH = bytes.fromhex('09c403e1f4b59ae0d14b00f7c68a3405f20389450fafeeafc0c38790ff3768ad')
 SALT = b'pythagoras-classroom-v1'
 RATE = defaultdict(deque)
+STATE_LOCK = RLock()
 
 
-def connect():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(DB_PATH, timeout=10)
-    db.row_factory = sqlite3.Row
-    db.execute('PRAGMA journal_mode=WAL')
-    db.execute('CREATE TABLE IF NOT EXISTS classroom (id INTEGER PRIMARY KEY CHECK (id=1), code TEXT NOT NULL, generation INTEGER NOT NULL)')
-    db.execute('CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, role TEXT NOT NULL, generation INTEGER, name TEXT, expires_at INTEGER NOT NULL, last_seen INTEGER NOT NULL)')
-    db.commit()
-    return db
+def initial_state():
+    return {'classroom': None, 'sessions': {}}
+
+
+def save_state(state):
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    generation = state['classroom']['generation'] if state['classroom'] else None
+    state['sessions'] = {key: value for key, value in state['sessions'].items()
+                         if value['expires_at'] > now and (value['role'] == 'teacher' or value['generation'] == generation)}
+    encoded = json.dumps(state, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='wb', dir=STATE_PATH.parent, prefix='.classroom-', suffix='.tmp', delete=False) as file:
+            temporary = Path(file.name)
+            os.chmod(temporary, 0o600)
+            file.write(encoded)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, STATE_PATH)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
+@contextmanager
+def state_file():
+    with STATE_LOCK:
+        if STATE_PATH.exists():
+            state = json.loads(STATE_PATH.read_text(encoding='utf-8'))
+        else:
+            state = initial_state()
+        yield state
 
 
 def digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def issue(db, role, generation=None, name=None):
+def issue(state, role, generation=None, name=None):
     token = secrets.token_urlsafe(32)
     now = int(time.time())
-    db.execute('INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?)', (digest(token), role, generation, name, now + 43200, now))
-    db.commit()
+    state['sessions'][digest(token)] = {
+        'role': role, 'generation': generation, 'name': name,
+        'expires_at': now + 43200, 'last_seen': now,
+    }
+    save_state(state)
     return token
 
 
@@ -109,12 +139,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.fail(400, '입력 형식을 확인해 주세요.')
         self.api('POST', path, data)
 
-    def session(self, db):
+    def session(self, state):
         header = self.headers.get('Authorization', '')
         if not header.startswith('Bearer '):
-            return None
-        row = db.execute('SELECT * FROM sessions WHERE token_hash=? AND expires_at>?', (digest(header[7:]), int(time.time()))).fetchone()
-        return row
+            return None, None
+        token_hash = digest(header[7:])
+        user = state['sessions'].get(token_hash)
+        if not user or user['expires_at'] <= int(time.time()):
+            return None, None
+        return token_hash, user
 
     def too_many_failures(self, key):
         now = time.monotonic()
@@ -127,9 +160,9 @@ class Handler(BaseHTTPRequestHandler):
         RATE[(self.client_address[0], key)].append(time.monotonic())
 
     def api(self, method, path, data):
-        with connect() as db:
-            user = self.session(db)
-            classroom = db.execute('SELECT * FROM classroom WHERE id=1').fetchone()
+        with state_file() as state:
+            token_hash, user = self.session(state)
+            classroom = state['classroom']
             current = user and (user['role'] == 'teacher' or classroom and user['generation'] == classroom['generation'])
             if path == '/api/session' and method == 'GET':
                 if not current:
@@ -142,7 +175,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(password, str) or not hmac.compare_digest(hashlib.pbkdf2_hmac('sha256', password.encode(), SALT, 200000), TEACHER_HASH):
                     self.record_failure('teacher')
                     return self.fail(401, '패스워드가 일치하지 않습니다.')
-                return self.reply(200, {'token': issue(db, 'teacher'), 'code': classroom['code'] if classroom else None})
+                return self.reply(200, {'token': issue(state, 'teacher'), 'code': classroom['code'] if classroom else None})
             if path == '/api/teacher/code' and method == 'POST':
                 if not user or user['role'] != 'teacher':
                     return self.fail(401, '선생님 로그인이 필요합니다.')
@@ -150,8 +183,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(code, str) or not re.fullmatch(r'[0-9]{4}', code):
                     return self.fail(400, '숫자 네 자리를 입력해 주세요.')
                 generation = (classroom['generation'] + 1) if classroom else 1
-                db.execute('INSERT INTO classroom (id, code, generation) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET code=excluded.code, generation=excluded.generation', (code, generation))
-                db.commit()
+                state['classroom'] = {'code': code, 'generation': generation}
+                save_state(state)
                 return self.reply(200, {'code': code})
             if path == '/api/teacher/classroom' and method == 'GET':
                 if not user or user['role'] != 'teacher':
@@ -159,8 +192,9 @@ class Handler(BaseHTTPRequestHandler):
                 if not classroom:
                     return self.reply(200, {'code': None, 'students': []})
                 cutoff = int(time.time()) - 45
-                rows = db.execute("SELECT name FROM sessions WHERE role='student' AND generation=? AND expires_at>? AND last_seen>=? ORDER BY last_seen DESC", (classroom['generation'], int(time.time()), cutoff)).fetchall()
-                return self.reply(200, {'code': classroom['code'], 'students': [{'name': row['name']} for row in rows]})
+                students = [entry for entry in state['sessions'].values() if entry['role'] == 'student' and entry['generation'] == classroom['generation'] and entry['expires_at'] > int(time.time()) and entry['last_seen'] >= cutoff]
+                students.sort(key=lambda entry: entry['last_seen'], reverse=True)
+                return self.reply(200, {'code': classroom['code'], 'students': [{'name': entry['name']} for entry in students]})
             if path == '/api/student/code' and method == 'POST':
                 if self.too_many_failures('student'):
                     return self.fail(429, '시도 횟수가 많습니다. 5분 뒤 다시 시도해 주세요.')
@@ -168,7 +202,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not classroom or not isinstance(code, str) or not hmac.compare_digest(code, classroom['code']):
                     self.record_failure('student')
                     return self.fail(401, '수업 코드가 일치하지 않습니다.')
-                return self.reply(200, {'token': issue(db, 'pending', classroom['generation'])})
+                return self.reply(200, {'token': issue(state, 'pending', classroom['generation'])})
             if path == '/api/student/join' and method == 'POST':
                 if not current or user['role'] != 'pending':
                     return self.fail(401, '수업 코드를 먼저 입력해 주세요.')
@@ -176,25 +210,27 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(name, str) or not 0 < len(name.strip()) <= 60:
                     return self.fail(400, '학번과 이름을 입력해 주세요.')
                 name = name.strip()
-                db.execute("UPDATE sessions SET role='student', name=?, last_seen=? WHERE token_hash=?", (name, int(time.time()), user['token_hash']))
-                db.commit()
+                user['role'] = 'student'
+                user['name'] = name
+                user['last_seen'] = int(time.time())
+                save_state(state)
                 return self.reply(200, {'name': name})
             if path == '/api/student/ping' and method == 'POST':
                 if not current or user['role'] != 'student':
                     return self.fail(401, '학생 입장이 필요합니다.')
-                db.execute('UPDATE sessions SET last_seen=? WHERE token_hash=?', (int(time.time()), user['token_hash']))
-                db.commit()
+                user['last_seen'] = int(time.time())
+                save_state(state)
                 return self.reply(200, {'ok': True})
             if path == '/api/logout' and method == 'POST':
-                if user:
-                    db.execute('DELETE FROM sessions WHERE token_hash=?', (user['token_hash'],))
-                    db.commit()
+                if token_hash:
+                    del state['sessions'][token_hash]
+                    save_state(state)
                 return self.reply(200, {'ok': True})
             self.fail(404, '주소를 찾을 수 없습니다.')
 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', '8000'))
-    connect().close()
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     print(f'Classroom server: http://localhost:{port}', flush=True)
     ThreadingHTTPServer(('0.0.0.0', port), Handler).serve_forever()
