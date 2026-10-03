@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get('PUZZLE_DB_PATH', ROOT / 'data' / 'classroom.sqlite3'))
 FRONTEND_ORIGIN = os.environ.get('PUZZLE_FRONTEND_ORIGIN', 'https://oscarkim0531.github.io').rstrip('/')
-TEACHER_HASH = bytes.fromhex('8aa2ea0b90f8e7d1a347df8c588e45b971edc7d1b284ef0a1a95f114ea5ac5e2')
+TEACHER_HASH = bytes.fromhex('09c403e1f4b59ae0d14b00f7c68a3405f20389450fafeeafc0c38790ff3768ad')
 SALT = b'pythagoras-classroom-v1'
 RATE = defaultdict(deque)
 
