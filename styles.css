@@ -107,9 +107,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .source-piece { cursor: grab; filter: drop-shadow(0 2px 1px #39342e2b); }
 .source-piece:active, .source-piece.is-dragging { cursor: grabbing; filter: drop-shadow(0 10px 7px #39342e4a); }
 .source-piece.near-target { opacity: .28; }
+.exact-grid path { fill: none; stroke: #d9e0e3; stroke-width: 1.5; stroke-dasharray: 5 5; }
+.exact-target { fill: #fff; stroke: #b7b7b7; stroke-width: 2.5; filter: drop-shadow(2px 5px 4px #0002); }
+.exact-right-angle { fill: none; stroke: #e34d53; stroke-width: 3.5; stroke-linecap: square; stroke-linejoin: miter; pointer-events: none; }
 .source-piece path { stroke: #fffdf8; stroke-width: 3; stroke-linejoin: round; }
 .placed-piece { cursor: pointer; }
 .placed-piece path { stroke: #fffdf8; stroke-width: 3; stroke-linejoin: round; }
+.exact-piece path { stroke: #92632d; stroke-width: 4; stroke-linejoin: round; }
 .target-cell { fill: #f8f6f1; stroke: #ded9d0; stroke-width: 1; }
 .preview-cell { fill: #7a92ca66; stroke: #5268b3; stroke-width: 2; }
 .preview-polygon { opacity: .82; stroke: #5268b3; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 2px 5px #5268b377); }

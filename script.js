@@ -27,74 +27,6 @@ const PALETTES = [
   ['#85bbed', '#a1d77f', '#efa46d', '#f4d16b', '#e8775f', '#c5a7dc', '#7fc9c7', '#eeb783'],
 ];
 
-// Nine additional dissections. Each cut is carried rigidly from a source square
-// into its matching part of the 5 x 5 square, so every polygon keeps its shape.
-const POLYGON_PALETTES = [
-  ['#ff9a4d', '#ff9a4d', '#ff9a4d', '#ff9a4d', '#b7f36b', '#ffe05b', '#3299ed', '#72dbed'],
-  ['#ffe05b', '#ffe05b', '#ffe05b', '#ffe05b', '#6ed4ed', '#f5c7ec', '#f2a8df', '#8bdded'],
-  ['#ff9b55', '#36bb59', '#ff9b55', '#36bb59', '#ff3b12', '#ffe05b', '#3299ed', '#ffe05b'],
-  ['#74dced', '#ffa05d', '#74dced', '#ffa05d', '#348deb', '#ffe05b', '#a5ed72', '#f2a3dd'],
-  ['#ee8dc9', '#ffe05b', '#ff9b54', '#ff3b12', '#a5ee6c', '#74dced', '#328eed', '#32bd60'],
-  ['#ff9b54', '#ffe05b', '#ff9b54', '#ffe05b', '#ff3b12', '#328eed', '#eda2da', '#a7ec6e'],
-  ['#b3ef72', '#348fed', '#b3ef72', '#348fed', '#ffe05b', '#ffaf77', '#ff3b12', '#37be63'],
-  ['#b5ef75', '#35ba60', '#328eed', '#73ddec', '#ff3b12', '#ff9b54', '#ffe05b', '#ff9b54'],
-  ['#348fed', '#b2ef70', '#ff9b54', '#36bd62', '#ff2517', '#f5c5e7', '#ffe05b', '#ff9b54'],
-];
-const POLYGON_CUTS = [
-  ['solid', 'solid', 'solid', 'solid', 'fan', 'diagonal', 'diagonal'],
-  ['solid', 'solid', 'solid', 'solid', 'fan', 'fan', 'diagonal'],
-  ['diagonal', 'solid', 'diagonal', 'solid', 'diagonal', 'corner', 'diagonal'],
-  ['diagonal', 'diagonal', 'solid', 'solid', 'fan', 'corner', 'diagonal'],
-  ['diagonal', 'diagonal', 'diagonal', 'diagonal', 'fan', 'diagonal', 'corner'],
-  ['diagonal', 'diagonal', 'diagonal', 'solid', 'corner', 'fan', 'diagonal'],
-  ['band', 'diagonal', 'solid', 'diagonal', 'corner', 'band', 'diagonal'],
-  ['fan', 'diagonal', 'band', 'solid', 'diagonal', 'corner', 'band'],
-  ['corner', 'band', 'diagonal', 'solid', 'diagonal', 'band', 'corner', 'diagonal'],
-];
-
-function splitRectangle(width, height, type) {
-  const w = width;
-  const h = height;
-  if (type === 'solid') return [[[0, 0], [w, 0], [w, h], [0, h]]];
-  if (type === 'diagonal') return [
-    [[0, 0], [w, 0], [w, h]], [[0, 0], [w, h], [0, h]],
-  ];
-  if (type === 'fan') {
-    const center = [w / 2, h / 2];
-    return [
-      [[0, 0], [w, 0], center], [[w, 0], [w, h], center],
-      [[w, h], [0, h], center], [[0, h], [0, 0], center],
-    ];
-  }
-  if (type === 'corner') return [
-    [[0, 0], [w, 0], [w, h * .42]],
-    [[0, 0], [w, h * .42], [w, h], [0, h]],
-  ];
-  return [
-    [[0, 0], [w, 0], [w, h * .32], [0, h * .67]],
-    [[0, h * .67], [w, h * .32], [w, h], [0, h]],
-  ];
-}
-
-function makePolygonPieces(index) {
-  const cuts = [...SMALL_CUT, ...LARGE_CUTS[index]];
-  const colors = POLYGON_PALETTES[index];
-  return cuts.flatMap(([x, y, width, height], cutIndex) => {
-    const board = cutIndex < 4 ? 'small' : 'large';
-    return splitRectangle(width, height, POLYGON_CUTS[index][cutIndex]).map((polygon, part) => {
-      const source = polygon.map(([u, v]) => [x + u, y + v]);
-      let target;
-      if (board === 'large') target = source;
-      else if (cutIndex === 0) target = polygon.map(([u, v]) => [u, 4 + v]);
-      else if (cutIndex === 1) target = polygon.map(([u, v]) => [5 - v, u]);
-      else if (cutIndex === 2) target = polygon.map(([u, v]) => [5 - v, 3 + u]);
-      else target = polygon.map(([u, v]) => [3 + u, 4 + v]);
-      return { id: `p${cutIndex}-${part}`, board, polygon: source, targetPolygon: target,
-        color: colors[(cutIndex + part) % colors.length], seamless: index < 2 && board === 'small' };
-    });
-  });
-}
-
 const $ = (selector) => document.querySelector(selector);
 const screens = { start: $('#start-screen'), select: $('#select-screen'), game: $('#game-screen') };
 const stage = $('#puzzle-stage');
@@ -139,7 +71,9 @@ function turnCells(cells, size, turns) {
 }
 
 function makePieces(level) {
-  if (level >= 9) return makePolygonPieces(level - 9);
+  if (level >= 9) return EBS_LEVELS[level - 9].pieces.map((piece) => ({
+    id: `ebs-${piece.id}`, tag: piece.tag, polygon: piece.polygon, color: piece.color, exact: true,
+  }));
   const palette = PALETTES[level];
   const smallTurns = level % 4;
   const small = SMALL_CUT.map((cut, index) => ({
@@ -293,20 +227,92 @@ function drawDiagram(svg, layout) {
 
 function sourcePath(piece, layout) {
   const board = layout[piece.board];
-  if (piece.polygon) return pathForPolygon(piece.polygon, (x, y) => boardPoint(board, x, y));
   return pathForCells(piece.cells, (x, y) => boardPoint(board, x, y));
 }
 
 function targetPath(piece, placement, target) {
-  if (piece.targetPolygon) {
-    return pathForPolygon(piece.targetPolygon, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
-  }
   const cells = rotatedShape(piece.cells, placement.turns).map(([x, y]) => [x + placement.x, y + placement.y]);
   return pathForCells(cells, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
 }
 
+function exactData() { return EBS_LEVELS[state.level - 9]; }
+
+function exactSourcePath(piece) {
+  // Screenshot segmentation finds the colour inside each original brown edge.
+  // Restore that edge width around the same polygon without changing its corners.
+  const center = polygonCenter(piece.polygon, (x, y) => [x, y]);
+  return pathForPolygon(piece.polygon, (x, y) => [
+    center.x + (x - center.x) * 1.09,
+    center.y + (y - center.y) * 1.09,
+  ]);
+}
+
+function exactTargetPath(piece, placement) {
+  const checker = exactData().checkers[placement.checker];
+  return pathForPolygon(checker.polygon, (x, y) => [x, y]);
+}
+
+function renderExactStage() {
+  const data = exactData();
+  stage.setAttribute('viewBox', '-325 -280 650 720');
+  stage.replaceChildren();
+  const [tx, ty] = data.target.center;
+  const [tw, th] = data.target.size;
+  const defs = svgElement('defs');
+  const clip = svgElement('clipPath', { id: 'exact-target-clip' });
+  clip.append(svgElement('rect', { x: tx - tw / 2, y: ty - th / 2, width: tw, height: th }));
+  defs.append(clip);
+  stage.append(defs);
+  const grid = svgElement('g', { class: 'exact-grid' });
+  for (let x = -325; x <= 325; x += 60) grid.append(svgElement('path', { d: `M ${x} -280 V 440` }));
+  for (let y = -280; y <= 440; y += 60) grid.append(svgElement('path', { d: `M -325 ${y} H 325` }));
+  stage.append(grid);
+  stage.append(svgElement('rect', { x: tx - tw / 2, y: ty - th / 2, width: tw, height: th,
+    class: 'exact-target' }));
+  for (const piece of state.pieces) {
+    if (state.placements.has(piece.id)) continue;
+    const group = svgElement('g', { class: 'source-piece exact-piece', 'data-piece': piece.id });
+    group.append(svgElement('path', { d: exactSourcePath(piece), fill: piece.color }));
+    stage.append(group);
+  }
+  if (state.placements.size === 0) {
+    const [cx, cy] = data.corner;
+    stage.append(svgElement('path', { d: `M ${cx - 4} ${cy + 2} L ${cx - 1} ${cy + 6} L ${cx + 3} ${cy + 3}`,
+      class: 'exact-right-angle' }));
+  }
+  for (const piece of state.pieces) {
+    const placement = state.placements.get(piece.id);
+    if (!placement) continue;
+    const group = svgElement('g', { class: 'placed-piece exact-piece', 'data-placed': piece.id,
+      'clip-path': 'url(#exact-target-clip)' });
+    group.append(svgElement('path', { d: exactTargetPath(piece, placement), fill: piece.color }));
+    stage.append(group);
+  }
+  stage.append(svgElement('g', { id: 'drop-preview', 'pointer-events': 'none',
+    'clip-path': 'url(#exact-target-clip)' }));
+}
+
+function findExactPlacement(piece, point, drag) {
+  const data = exactData();
+  const center = drag ? { x: drag.center.x + point.x - drag.start.x,
+    y: drag.center.y + point.y - drag.start.y } : point;
+  const occupied = new Set([...state.placements.values()].map((value) => value.checker));
+  let closest = null;
+  data.checkers.forEach((checker, index) => {
+    if (occupied.has(index) || !checker.allows.some((rule) => rule.piece === piece.tag)) return;
+    const distance = Math.hypot(center.x - checker.center[0], center.y - checker.center[1]);
+    if (!closest || distance < closest.distance) closest = { checker: index, distance };
+  });
+  const [tx, ty] = data.target.center;
+  const [tw, th] = data.target.size;
+  const squareDistance = Math.hypot(Math.max(Math.abs(center.x - tx) - tw / 2, 0),
+    Math.max(Math.abs(center.y - ty) - th / 2, 0));
+  return closest && (closest.distance < 105 || squareDistance < 30) ? closest : null;
+}
+
 function renderStage() {
   if (screens.game.hidden) return;
+  if (state.level >= 9) { renderExactStage(); return; }
   const layout = geometry();
   stage.setAttribute('viewBox', layout.viewBox);
   stage.replaceChildren();
@@ -365,18 +371,8 @@ function occupiedCells() {
 }
 
 function findPlacement(piece, point, drag = null) {
+  if (piece.exact) return findExactPlacement(piece, point, drag);
   const target = geometry().target;
-  if (piece.targetPolygon) {
-    const desired = polygonCenter(piece.targetPolygon, (x, y) => [target.x + x * target.cell, target.y + y * target.cell]);
-    const moving = drag
-      ? { x: drag.center.x + point.x - drag.start.x, y: drag.center.y + point.y - drag.start.y }
-      : point;
-    const distance = Math.hypot(desired.x - moving.x, desired.y - moving.y);
-    const edgeX = Math.max(target.x - moving.x, 0, moving.x - target.x - 5 * target.cell);
-    const edgeY = Math.max(target.y - moving.y, 0, moving.y - target.y - 5 * target.cell);
-    const nearSquare = Math.hypot(edgeX, edgeY) <= target.cell * .55;
-    return nearSquare || distance <= target.cell * 1.9 ? { distance } : null;
-  }
   const used = occupiedCells();
   let closest = null;
   for (let turns = 0; turns < 2; turns += 1) {
@@ -400,13 +396,11 @@ function drawPreview(piece, placement) {
   if (!preview) return;
   preview.replaceChildren();
   if (!placement) return;
-  const target = geometry().target;
-  if (piece.targetPolygon) {
-    preview.append(svgElement('path', {
-      d: targetPath(piece, placement, target), fill: piece.color, class: 'preview-polygon',
-    }));
+  if (piece.exact) {
+    preview.append(svgElement('path', { d: exactTargetPath(piece, placement), fill: piece.color, class: 'preview-polygon' }));
     return;
   }
+  const target = geometry().target;
   for (const [x, y] of rotatedShape(piece.cells, placement.turns)) {
     preview.append(svgElement('rect', {
       x: target.x + (placement.x + x) * target.cell,
@@ -489,6 +483,16 @@ function closeConfirmation(accept) {
 function drawGallery() {
   document.querySelectorAll('.level-card').forEach((card) => {
     const level = Number(card.dataset.level);
+    if (level >= 9) {
+      const data = EBS_LEVELS[level - 9];
+      const svg = svgElement('svg', { viewBox: '-290 -310 580 380', 'aria-hidden': 'true' });
+      for (const piece of data.pieces) svg.append(svgElement('path', {
+        d: exactSourcePath(piece), fill: piece.color,
+        stroke: '#8f612c', 'stroke-width': 3, 'stroke-linejoin': 'round',
+      }));
+      card.querySelector('.level-art').append(svg);
+      return;
+    }
     const svg = svgElement('svg', { viewBox: '0 0 270 135', 'aria-hidden': 'true' });
     const small = { origin: [38, 33], u: [19, 0], v: [0, 19], size: 3 };
     const large = { origin: [145, 14], u: [19, 0], v: [0, 19], size: 4 };
@@ -521,7 +525,7 @@ stage.addEventListener('pointerdown', (event) => {
   const piece = state.pieces.find((item) => item.id === source.dataset.piece);
   const point = pointInStage(event);
   const layout = geometry();
-  const center = piece.polygon
+  const center = piece.exact ? polygonCenter(piece.polygon, (x, y) => [x, y]) : piece.polygon
     ? polygonCenter(piece.polygon, (x, y) => boardPoint(layout[piece.board], x, y))
     : null;
   state.dragging = { piece, element: source, start: point, center, moved: false, pointerId: event.pointerId };
@@ -550,7 +554,7 @@ function endDrag(event) {
   if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
   const placement = drag.moved && event.type !== 'pointercancel' ? findPlacement(drag.piece, pointInStage(event), drag) : null;
   if (placement) {
-    state.placements.set(drag.piece.id, { x: placement.x, y: placement.y, turns: placement.turns });
+    state.placements.set(drag.piece.id, placement);
     status.textContent = `조각을 놓았습니다. ${state.placements.size}개 배치했습니다.`;
   } else if (drag.moved) {
     status.textContent = '빈 칸에 맞게 놓아 주세요. 조각이 원래 자리로 돌아갑니다.';
