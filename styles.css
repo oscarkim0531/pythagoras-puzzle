@@ -75,6 +75,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .start-screen .primary-button span { margin-left: 16px; }
 .role-actions { display: flex; justify-content: center; gap: 12px; width: min(100%, 400px); }
 .role-actions button { flex: 1; font-size: 1.08rem; }
+.classroom-unavailable { max-width: 390px; margin: 0; padding: 14px 18px; border: 1px solid #e5d9c6; border-radius: 12px; background: #fff8e9; color: var(--muted); line-height: 1.6; }
 .access-screen { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 70px 24px; text-align: center; }
 .access-back { position: absolute; top: 26px; left: 26px; }
 .access-screen h2 { max-width: 560px; margin: 10px 0 26px; font-size: clamp(1.55rem, 4vw, 2.5rem); line-height: 1.35; letter-spacing: -.055em; }

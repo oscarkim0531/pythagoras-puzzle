@@ -9,8 +9,7 @@
     <link rel="stylesheet" href="styles.css?v=7" />
     <script src="ebs-levels.js?v=6" defer></script>
     <script src="script.js?v=7" defer></script>
-    <script src="classroom-config.js?v=7" defer></script>
-    <script src="classroom.js?v=7" defer></script>
+    <script src="classroom.js?v=8" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -23,7 +22,8 @@
         <p class="eyebrow">수학을 손으로 맞춰 보세요</p>
         <h1 id="start-title">피타고라스 정리 퍼즐</h1>
         <p class="lead">두 정사각형의 조각으로 세 번째 정사각형을 채워 보세요.</p>
-        <div class="role-actions"><button id="teacher-button" class="secondary-button" type="button">선생님</button><button id="student-button" class="primary-button" type="button">학생</button></div>
+        <div id="role-actions" class="role-actions" hidden><button id="teacher-button" class="secondary-button" type="button">선생님</button><button id="student-button" class="primary-button" type="button">학생</button></div>
+        <p id="classroom-unavailable" class="classroom-unavailable" hidden>지금은 수업이 열려 있지 않습니다. 선생님이 수업을 시작하면 새로고침해 주세요.</p>
         <p class="formula" aria-label="에이 제곱 더하기 비 제곱은 씨 제곱">a² + b² = c²</p>
       </section>
 

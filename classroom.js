@@ -1,7 +1,23 @@
-(() => {
+(async () => {
   const $ = (selector) => document.querySelector(selector);
   const game = window.PuzzleGame;
-  const apiBase = (window.CLASSROOM_API_URL || '').replace(/\/$/, '');
+  let apiBase = '';
+  const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (!local) {
+    try {
+      const response = await fetch(`classroom-config.json?t=${Date.now()}`, { cache: 'no-store' });
+      const config = await response.json();
+      const url = new URL(config.api);
+      if (url.protocol === 'https:' && !url.username && !url.password && Date.now() < config.expiresAt) {
+        apiBase = url.origin;
+      }
+    } catch {}
+    if (!apiBase) {
+      $('#classroom-unavailable').hidden = false;
+      return;
+    }
+  }
+  $('#role-actions').hidden = false;
   let token = sessionStorage.getItem('puzzleSession') || '';
   let role = null;
   let rosterTimer = null;
