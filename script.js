@@ -34,12 +34,7 @@ function polygonCenter(vertices) {
 }
 
 function piecePath(piece) {
-  // Keep the corners traced from the nine supplied screenshots.
-  const center = polygonCenter(piece.polygon);
-  return pathForPolygon(piece.polygon.map(([x, y]) => [
-    center.x + (x - center.x) * 1.09,
-    center.y + (y - center.y) * 1.09,
-  ]));
+  return pathForPolygon(piece.polygon);
 }
 
 function drawGallery() {
@@ -81,7 +76,7 @@ function startClock() {
 function beginLevel(level) {
   state.level = level;
   state.pieces = EBS_LEVELS[level].pieces;
-  state.transforms = new Map(state.pieces.map((piece) => [piece.id, { x: 0, y: 0, angle: 0 }]));
+  state.transforms = new Map(state.pieces.map((piece) => [piece.id, { x: 0, y: 0, angle: 0, flipped: false }]));
   state.selected = null;
   state.dragging = null;
   state.seconds = 0;
@@ -98,9 +93,9 @@ function transformFor(id) { return state.transforms.get(id); }
 function updatePieceElement(id) {
   const group = stage.querySelector(`[data-piece="${id}"]`);
   if (!group) return;
-  const { x, y, angle } = transformFor(id);
+  const { x, y, angle, flipped } = transformFor(id);
   const { x: cx, y: cy } = polygonCenter(pieceById(id).polygon);
-  group.setAttribute('transform', `translate(${x} ${y}) rotate(${angle} ${cx} ${cy})`);
+  group.setAttribute('transform', `translate(${x} ${y}) rotate(${angle} ${cx} ${cy}) translate(${cx} ${cy}) scale(${flipped ? -1 : 1} 1) translate(${-cx} ${-cy})`);
 }
 
 function renderStage() {
@@ -121,11 +116,6 @@ function renderStage() {
   stage.append(svgElement('rect', {
     x: tx - tw / 2, y: ty - th / 2, width: tw, height: th,
     fill: '#fff', stroke: '#b7b7b7', 'stroke-width': 2.5,
-  }));
-  const [cx, cy] = data.corner;
-  stage.append(svgElement('path', {
-    d: `M ${cx - 4} ${cy + 2} L ${cx - 1} ${cy + 6} L ${cx + 3} ${cy + 3}`,
-    fill: 'none', stroke: '#e34d53', 'stroke-width': 3.5, 'pointer-events': 'none',
   }));
   const order = [...state.pieces];
   if (state.selected !== null) {
@@ -240,6 +230,12 @@ $('#rotate-left').addEventListener('click', () => rotateSelected(-15));
 $('#rotate-left-fine').addEventListener('click', () => rotateSelected(-1));
 $('#rotate-right-fine').addEventListener('click', () => rotateSelected(1));
 $('#rotate-right').addEventListener('click', () => rotateSelected(15));
+$('#flip-horizontal').addEventListener('click', () => {
+  if (state.selected === null) return;
+  const transform = transformFor(state.selected);
+  transform.flipped = !transform.flipped;
+  updatePieceElement(state.selected);
+});
 window.addEventListener('keydown', (event) => {
   if (screens.game.hidden || state.selected === null || document.querySelector('dialog[open]')) return;
   if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
