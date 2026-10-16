@@ -11,7 +11,7 @@
 
 ## 제출 연결
 
-Google Drive 폴더의 공유 링크만으로는 웹페이지가 파일을 API로 업로드할 수 없습니다. `apps-script/Code.gs`를 Google Apps Script 웹 앱으로 배포하고 `submission-config.js`에 생성된 `/exec` URL을 넣어야 합니다. 웹 앱은 `apps-script/appsscript.json`의 `drive.file` 및 `script.external_request` 범위를 요청하고, `Code.gs`에 지정된 [제출 폴더](https://drive.google.com/drive/folders/10Flk0SE0m5Xaa3ynOLxzTlP6n3DA7l2T)에 PNG를 저장합니다. 웹 앱은 배포 계정으로 실행되므로 학생마다 Drive API 키를 만들 필요는 없습니다. 공개 대상은 수업에서 사용할 Google 계정 범위에 맞게 설정합니다.
+Google Drive 폴더의 공유 링크만으로는 웹페이지가 파일을 API로 업로드할 수 없습니다. `apps-script/Code.gs`를 Google Apps Script 웹 앱으로 배포하고 `submission-config.js`에 생성된 `/exec` URL을 넣어야 합니다. 웹 앱은 `apps-script/appsscript.json`의 `drive.file` 및 `script.external_request` 범위를 요청하고, `Code.gs`에 지정된 [제출 폴더](https://drive.google.com/drive/folders/10Flk0SE0m5Xaa3ynOLxzTlP6n3DA7l2T)에 PNG를 저장합니다. 웹 앱은 **나(배포 계정)의 인증 정보로 실행**, **액세스 권한이 있는 사용자: 모든 사용자**로 배포합니다. 따라서 학생은 Google 계정에 로그인하지 않고 제출할 수 있으며, 저장된 파일의 소유자는 배포 계정입니다. 제출 URL을 아는 사람도 파일을 보낼 수 있으므로 수업이 끝나면 배포 접근 권한을 다시 제한할 수 있습니다.
 
 `submission-config.js`가 비어 있으면 제출 버튼은 업로드 실패를 알리며 성공 메시지를 표시하지 않습니다.
 
