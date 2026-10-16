@@ -113,6 +113,12 @@ function renderStage() {
     d: `M -325 ${y} H 325`, fill: 'none', stroke: '#d9e0e3', 'stroke-width': 1.5, 'stroke-dasharray': '5 5',
   }));
   stage.append(grid);
+  const sourceOutlines = svgElement('g', { 'aria-hidden': 'true', 'pointer-events': 'none' });
+  data.sources.forEach(({ corners }) => sourceOutlines.append(svgElement('path', {
+    d: pathForPolygon(corners), fill: 'none', stroke: '#b7b7b7',
+    'stroke-width': 2.5, 'stroke-linejoin': 'miter',
+  })));
+  stage.append(sourceOutlines);
   stage.append(svgElement('rect', {
     x: tx - tw / 2, y: ty - th / 2, width: tw, height: th,
     fill: '#fff', stroke: '#b7b7b7', 'stroke-width': 2.5,
