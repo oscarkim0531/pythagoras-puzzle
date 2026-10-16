@@ -344,19 +344,22 @@ $('#submit-form').addEventListener('submit', async (event) => {
   }
   $('#submit-confirm').disabled = true;
   $('#submit-confirm').textContent = '제출 중…';
+  const requestId = crypto.randomUUID();
+  const timeout = setTimeout(() => {
+    if (state.upload?.requestId !== requestId) return;
+    popup.close();
+    finishUpload();
+    $('#submit-error').textContent = '제출을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }, 45000);
+  state.upload = { requestId, timeout, studentNumber, level: state.level, popup };
   try {
     const payload = await puzzlePngDataUrl();
-    const requestId = crypto.randomUUID();
-    const timeout = setTimeout(() => {
-      if (state.upload?.requestId !== requestId) return;
-      state.upload?.popup.close();
-      finishUpload();
-      $('#submit-error').textContent = '제출 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
-    }, 45000);
-    state.upload = { requestId, timeout, studentNumber, level: state.level, popup };
+    if (state.upload?.requestId !== requestId) return;
+    if (popup.closed) throw new Error('제출 창이 닫혔습니다. 다시 시도해 주세요.');
     uploadViaForm(payload, studentNumber, requestId, popupName);
   } catch (error) {
-    if (state.upload) clearTimeout(state.upload.timeout);
+    if (state.upload?.requestId !== requestId) return;
+    clearTimeout(timeout);
     popup.close();
     finishUpload();
     $('#submit-error').textContent = error.message || '제출하지 못했습니다.';
