@@ -24,11 +24,18 @@ function appendPieceGraphic(parent, piece) {
   const artwork = svgElement('g', {
     transform: `rotate(${image.angle} ${image.anchor.join(' ')})`,
   });
-  artwork.append(svgElement('image', {
-    href: piece.asset, x: image.x, y: image.y,
-    width: image.width, height: image.height,
-    'pointer-events': 'none',
-  }));
+  if (piece.vector) {
+    artwork.append(svgElement('path', {
+      d: pathForPolygon(piece.vector), fill: '#ffdc4e', stroke: '#7b511b',
+      'stroke-width': 2.2, 'stroke-linejoin': 'miter', 'pointer-events': 'none',
+    }));
+  } else {
+    artwork.append(svgElement('image', {
+      href: piece.asset, x: image.x, y: image.y,
+      width: image.width, height: image.height,
+      'pointer-events': 'none',
+    }));
+  }
   artwork.append(svgElement('path', {
     d: pathForPolygon(piece.hit), fill: 'transparent',
     stroke: 'none', 'pointer-events': 'all',

@@ -47,4 +47,15 @@ for (const [index, level] of levels.entries()) {
     assert.ok(stretch < 1.06, `퍼즐 ${level.number} 조각 ${piece.id}이 과도하게 변형됐습니다.`);
   }
 }
+const yellow = levels[2].pieces.find((piece) => piece.asset.endsWith('4_5_off.png'));
+assert.equal(yellow.vector.length, 4);
+const [m0, m1, m2, m3, tx, ty] = yellow.sourceMatrix;
+const mapped = yellow.vector.map(([x, y]) => [m0 * x + m2 * y + tx, m1 * x + m3 * y + ty]);
+for (const coordinate of [0, 1]) {
+  near(mapped[0][coordinate], levels[2].sources[1].corners[3][coordinate], '노란 조각 위 꼭짓점');
+  near(mapped[1][coordinate], levels[2].sources[1].corners[2][coordinate], '노란 조각 오른쪽 꼭짓점');
+}
+const [right, bottom] = [levels[2].sources[1].corners[2], levels[2].sources[1].corners[1]];
+near((bottom[0] - right[0]) * (mapped[2][1] - right[1]) -
+  (bottom[1] - right[1]) * (mapped[2][0] - right[0]), 0, '노란 조각 오른쪽 변', 0.01);
 console.log('9개 퍼즐: 직각, 세 정사각형의 변, a²+b²=c², 조각 이미지 확인 완료');
