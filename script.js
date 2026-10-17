@@ -3,7 +3,6 @@ const $ = (selector) => document.querySelector(selector);
 const stage = $('#puzzle-stage');
 const screens = { start: $('#start-screen'), select: $('#select-screen'), game: $('#game-screen') };
 const state = { level: 0, pieces: [], transforms: new Map(), selected: null, dragging: null, seconds: 0, clock: null, pendingAction: null, upload: null };
-const STAGE_VIEWBOX = '-325 -280 650 720';
 function trustedUploadOrigin(origin) {
   return origin === 'https://script.google.com' ||
     /^https:\/\/[a-z0-9-]*script\.googleusercontent\.com$/.test(origin);
@@ -19,32 +18,34 @@ function pathForPolygon(vertices) {
   return `M ${vertices.map(([x, y]) => `${x} ${y}`).join(' L ')} Z`;
 }
 
-function polygonCenter(vertices) {
-  let twiceArea = 0;
-  let centerX = 0;
-  let centerY = 0;
-  vertices.forEach(([x1, y1], index) => {
-    const [x2, y2] = vertices[(index + 1) % vertices.length];
-    const cross = x1 * y2 - x2 * y1;
-    twiceArea += cross;
-    centerX += (x1 + x2) * cross;
-    centerY += (y1 + y2) * cross;
+function appendPieceGraphic(parent, piece) {
+  const side = svgElement('g', { transform: `matrix(${piece.sourceMatrix.join(' ')})` });
+  const image = piece.image;
+  const artwork = svgElement('g', {
+    transform: `rotate(${image.angle} ${image.anchor.join(' ')})`,
   });
-  return { x: centerX / (3 * twiceArea), y: centerY / (3 * twiceArea) };
-}
-
-function piecePath(piece) {
-  return pathForPolygon(piece.polygon);
+  artwork.append(svgElement('image', {
+    href: piece.asset, x: image.x, y: image.y,
+    width: image.width, height: image.height,
+    'pointer-events': 'none',
+  }));
+  artwork.append(svgElement('path', {
+    d: pathForPolygon(piece.hit), fill: 'transparent',
+    stroke: 'none', 'pointer-events': 'all',
+  }));
+  side.append(artwork);
+  parent.append(side);
 }
 
 function drawGallery() {
   document.querySelectorAll('.level-card').forEach((card) => {
     const level = Number(card.dataset.level);
-    const svg = svgElement('svg', { viewBox: '-290 -310 580 380', 'aria-hidden': 'true' });
-    EBS_LEVELS[level].pieces.forEach((piece) => svg.append(svgElement('path', {
-      d: piecePath(piece), fill: piece.color, stroke: '#8f612c', 'stroke-width': 3,
-      'stroke-linejoin': 'round',
+    const data = EBS_LEVELS[level];
+    const svg = svgElement('svg', { viewBox: `0 0 ${data.canvas[0]} ${data.target.y + 5}`, 'aria-hidden': 'true' });
+    data.sources.forEach(({ corners }) => svg.append(svgElement('path', {
+      d: pathForPolygon(corners), fill: '#f7f7f7', stroke: '#b7b7b7', 'stroke-width': 1.3,
     })));
+    data.pieces.forEach((piece) => appendPieceGraphic(svg, piece));
     card.querySelector('.level-art').append(svg);
   });
 }
@@ -94,34 +95,33 @@ function updatePieceElement(id) {
   const group = stage.querySelector(`[data-piece="${id}"]`);
   if (!group) return;
   const { x, y, angle, flipped } = transformFor(id);
-  const { x: cx, y: cy } = polygonCenter(pieceById(id).polygon);
+  const [cx, cy] = pieceById(id).pivot;
   group.setAttribute('transform', `translate(${x} ${y}) rotate(${angle} ${cx} ${cy}) translate(${cx} ${cy}) scale(${flipped ? -1 : 1} 1) translate(${-cx} ${-cy})`);
 }
 
 function renderStage() {
   if (screens.game.hidden) return;
   const data = EBS_LEVELS[state.level];
-  const [tx, ty] = data.target.center;
-  const [tw, th] = data.target.size;
-  stage.setAttribute('viewBox', STAGE_VIEWBOX);
+  const [width, height] = data.canvas;
+  stage.setAttribute('viewBox', `0 0 ${width} ${height}`);
   stage.replaceChildren();
   const grid = svgElement('g', { 'aria-hidden': 'true' });
-  for (let x = -325; x <= 325; x += 60) grid.append(svgElement('path', {
-    d: `M ${x} -280 V 440`, fill: 'none', stroke: '#d9e0e3', 'stroke-width': 1.5, 'stroke-dasharray': '5 5',
+  for (let x = 0; x <= width; x += 60) grid.append(svgElement('path', {
+    d: `M ${x} 0 V ${height}`, fill: 'none', stroke: '#d9e0e3', 'stroke-width': 1.2, 'stroke-dasharray': '5 5',
   }));
-  for (let y = -280; y <= 440; y += 60) grid.append(svgElement('path', {
-    d: `M -325 ${y} H 325`, fill: 'none', stroke: '#d9e0e3', 'stroke-width': 1.5, 'stroke-dasharray': '5 5',
+  for (let y = 0; y <= height; y += 60) grid.append(svgElement('path', {
+    d: `M 0 ${y} H ${width}`, fill: 'none', stroke: '#d9e0e3', 'stroke-width': 1.2, 'stroke-dasharray': '5 5',
   }));
   stage.append(grid);
   const sourceOutlines = svgElement('g', { 'aria-hidden': 'true', 'pointer-events': 'none' });
   data.sources.forEach(({ corners }) => sourceOutlines.append(svgElement('path', {
-    d: pathForPolygon(corners), fill: 'none', stroke: '#b7b7b7',
-    'stroke-width': 2.5, 'stroke-linejoin': 'miter',
+    d: pathForPolygon(corners), fill: '#f7f7f7', stroke: '#b7b7b7',
+    'stroke-width': 1.4, 'stroke-linejoin': 'miter',
   })));
   stage.append(sourceOutlines);
   stage.append(svgElement('rect', {
-    x: tx - tw / 2, y: ty - th / 2, width: tw, height: th,
-    fill: '#fff', stroke: '#b7b7b7', 'stroke-width': 2.5,
+    x: data.target.x, y: data.target.y, width: data.target.size, height: data.target.size,
+    fill: '#f7f7f7', stroke: '#b7b7b7', 'stroke-width': 1.4,
   }));
   const order = [...state.pieces];
   if (state.selected !== null) {
@@ -134,18 +134,14 @@ function renderStage() {
       class: `source-piece exact-piece${selected ? ' is-selected' : ''}`,
       'data-piece': piece.id,
     });
-    group.append(svgElement('path', {
-      d: piecePath(piece), fill: piece.color, stroke: '#92632d',
-      'stroke-width': 4, 'stroke-linejoin': 'round',
-    }));
+    appendPieceGraphic(group, piece);
     if (selected) {
-      const center = polygonCenter(piece.polygon);
-      const top = Math.min(...piece.polygon.map(([, y]) => y));
-      const handleY = Math.max(-270, top - 24);
+      const [cx, cy] = piece.pivot;
+      const handleY = Math.max(12, cy - 45);
       const ui = svgElement('g', { class: 'rotation-ui', 'aria-hidden': 'true' });
-      ui.append(svgElement('path', { d: `M ${center.x} ${top} L ${center.x} ${handleY}`, stroke: '#5268b3', 'stroke-width': 2 }));
-      ui.append(svgElement('circle', { cx: center.x, cy: handleY, r: 12, fill: '#fff', stroke: '#5268b3', 'stroke-width': 3, 'data-rotate': piece.id }));
-      const handleLabel = svgElement('text', { x: center.x, y: handleY + 5, 'text-anchor': 'middle', fill: '#5268b3', 'font-size': 15, 'pointer-events': 'none' });
+      ui.append(svgElement('path', { d: `M ${cx} ${cy} L ${cx} ${handleY}`, stroke: '#5268b3', 'stroke-width': 2 }));
+      ui.append(svgElement('circle', { cx, cy: handleY, r: 12, fill: '#fff', stroke: '#5268b3', 'stroke-width': 3, 'data-rotate': piece.id }));
+      const handleLabel = svgElement('text', { x: cx, y: handleY + 5, 'text-anchor': 'middle', fill: '#5268b3', 'font-size': 15, 'pointer-events': 'none' });
       handleLabel.textContent = '↻';
       ui.append(handleLabel);
       group.append(ui);
@@ -167,9 +163,9 @@ function pointInStage(event) {
 }
 
 function pieceCenterOnStage(id) {
-  const center = polygonCenter(pieceById(id).polygon);
+  const [x, y] = pieceById(id).pivot;
   const transform = transformFor(id);
-  return { x: center.x + transform.x, y: center.y + transform.y };
+  return { x: x + transform.x, y: y + transform.y };
 }
 
 stage.addEventListener('pointerdown', (event) => {
@@ -278,13 +274,35 @@ function updateFileName() {
   $('#submit-file-name').textContent = number ? `파일명: ${currentFileName(number)}` : `파일명: 학번_${state.level + 1}.png`;
 }
 
-function puzzlePngDataUrl() {
+const imageDataCache = new Map();
+async function embeddedImageData(path) {
+  if (!imageDataCache.has(path)) {
+    imageDataCache.set(path, (async () => {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error('퍼즐 조각 이미지를 불러오지 못했습니다.');
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('퍼즐 조각 이미지를 읽지 못했습니다.'));
+        reader.readAsDataURL(blob);
+      });
+    })());
+  }
+  return imageDataCache.get(path);
+}
+
+async function puzzlePngDataUrl() {
   const clone = stage.cloneNode(true);
   clone.querySelectorAll('.rotation-ui').forEach((control) => control.remove());
+  await Promise.all([...clone.querySelectorAll('image')].map(async (item) => {
+    item.setAttribute('href', await embeddedImageData(item.getAttribute('href')));
+  }));
+  const [width, height] = EBS_LEVELS[state.level].canvas;
   clone.setAttribute('xmlns', SVG_NS);
-  clone.setAttribute('width', '1300');
-  clone.setAttribute('height', '1440');
-  clone.setAttribute('viewBox', STAGE_VIEWBOX);
+  clone.setAttribute('width', String(width * 2));
+  clone.setAttribute('height', String(height * 2));
+  clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
   clone.removeAttribute('role');
   clone.removeAttribute('aria-label');
   const source = new XMLSerializer().serializeToString(clone);
@@ -294,7 +312,7 @@ function puzzlePngDataUrl() {
     image.onload = () => {
       URL.revokeObjectURL(url);
       const canvas = document.createElement('canvas');
-      canvas.width = 1300; canvas.height = 1440;
+      canvas.width = width * 2; canvas.height = height * 2;
       const context = canvas.getContext('2d');
       context.fillStyle = '#fff';
       context.fillRect(0, 0, canvas.width, canvas.height);

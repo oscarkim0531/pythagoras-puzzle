@@ -1,6 +1,6 @@
 # 피타고라스 정리 퍼즐
 
-[웹사이트](https://oscarkim0531.github.io/pythagoras-puzzle/)는 교사·학생 구분이나 수업 코드 없이 시작합니다. 제공된 아홉 장의 이미지에서 옮긴 다각형 조각을 선택해 직접 이동·회전하고, 각 퍼즐에서 학번을 입력해 현재 퍼즐 영역을 PNG로 제출합니다. 조각은 처음에 크기가 서로 다른 두 정사각형을 이루며, 조각을 옮긴 뒤에도 두 정사각형의 테두리가 조각 아래에 남습니다. 조각은 자동으로 회전하거나 붙지 않으며 완료 판정도 없습니다.
+[웹사이트](https://oscarkim0531.github.io/pythagoras-puzzle/)는 교사·학생 구분이나 수업 코드 없이 시작합니다. [EBSMath 원본 퍼즐](https://www.ebsmath.co.kr/innovativelrms/web_lrms/content/resource/PC/29725/index.html)의 2~10번 조각 이미지를 원래 배치와 회전에 맞춰 사용합니다. 처음의 두 정사각형은 직각삼각형의 두 직각변 위에, 아래 정사각형은 빗변 위에 그려집니다. 각 퍼즐에서 조각을 직접 이동·회전하고 학번을 입력해 현재 퍼즐 영역을 PNG로 제출합니다. 조각을 옮긴 뒤에도 두 정사각형의 테두리가 조각 아래에 남습니다. 조각은 자동으로 회전하거나 붙지 않으며 완료 판정도 없습니다.
 
 ## 조작
 
@@ -19,7 +19,8 @@ Google Drive 폴더의 공유 링크만으로는 웹페이지가 파일을 API�
 
 - `index.html`: 페이지 구조와 문구
 - `styles.css`: 디자인과 반응형 레이아웃
-- `ebs-levels.js`: 제공된 이미지에서 옮긴 아홉 퍼즐의 조각 좌표
+- `ebs-levels.js`: 원본 조각 배치와 피타고라스 정리가 정확히 성립하는 세 정사각형 좌표
+- `assets/ebs/`: EBSMath 원본 퍼즐의 조각 이미지 56개(같은 이미지를 여러 조각에서 재사용)
 - `script.js`: 조각 조작, PNG 생성, 제출 흐름
 - `submission-config.js`: Apps Script 웹 앱 주소
 - `apps-script/`: Google Drive 업로드 웹 앱 코드
