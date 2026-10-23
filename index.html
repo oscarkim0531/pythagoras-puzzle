@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#f6f2ea" />
     <meta name="description" content="조각을 직접 옮기고 돌려 피타고라스 정리를 완성하는 퍼즐" />
     <title>피타고라스 정리 퍼즐</title>
-    <link rel="stylesheet" href="styles.css?v=9" />
+    <link rel="stylesheet" href="styles.css?v=10" />
     <script src="ebs-levels.js?v=9" defer></script>
     <script src="submission-config.js?v=1" defer></script>
-    <script src="script.js?v=12" defer></script>
+    <script src="script.js?v=13" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -76,10 +76,10 @@
 
     <dialog id="submit-dialog" class="app-dialog" aria-labelledby="submit-title">
       <h2 id="submit-title">퍼즐 제출</h2>
-      <p class="dialog-copy">현재 퍼즐 영역을 이미지로 제출합니다. 제출할 때마다 학번을 입력해 주세요.</p>
+      <p class="dialog-copy">현재 퍼즐 영역을 이미지로 제출합니다. 제출할 때마다 이름을 입력해 주세요.</p>
       <form id="submit-form">
-        <label class="field-label" for="student-number">학번</label>
-        <input id="student-number" type="text" inputmode="numeric" pattern="[0-9]{1,12}" maxlength="12" autocomplete="off" placeholder="예) 20101" required />
+        <label class="field-label" for="student-name">이름을 적어주세요.</label>
+        <input id="student-name" type="text" maxlength="40" autocomplete="name" placeholder="예) 김대청" required />
         <p id="submit-file-name" class="field-help"></p><p id="submit-error" class="form-error" role="alert"></p>
         <div class="dialog-actions"><button id="submit-cancel" class="secondary-button" type="button">취소</button><button id="submit-confirm" class="primary-button" type="submit">드라이브에 제출</button></div>
       </form>

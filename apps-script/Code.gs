@@ -9,9 +9,9 @@ function doPost(e) {
   try {
     if (params.origin !== ALLOWED_ORIGIN) throw new Error('허용되지 않은 사이트에서 제출했습니다.');
     if (!requestId) throw new Error('제출 요청이 올바르지 않습니다.');
-    const studentNumber = String(params.studentNumber || '').trim();
+    const studentName = String(params.studentName || '').trim();
     const puzzleNumber = Number(params.puzzleNumber);
-    if (!/^[0-9]{1,12}$/.test(studentNumber)) throw new Error('학번은 숫자만 입력해 주세요.');
+    if (!studentName || studentName.length > 40 || /[/\\\u0000-\u001f]/u.test(studentName)) throw new Error('이름을 올바르게 입력해 주세요.');
     if (!Number.isInteger(puzzleNumber) || puzzleNumber < 1 || puzzleNumber > 9) throw new Error('퍼즐 번호가 올바르지 않습니다.');
     const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(params.payload || '');
     if (!match || match[1].length > Math.ceil(MAX_PNG_BYTES * 4 / 3) + 4) throw new Error('퍼즐 이미지가 올바르지 않거나 너무 큽니다.');
@@ -19,7 +19,7 @@ function doPost(e) {
     if (bytes.length > MAX_PNG_BYTES || bytes.length < 8 || (bytes[0] & 255) !== 137 || (bytes[1] & 255) !== 80 || (bytes[2] & 255) !== 78 || (bytes[3] & 255) !== 71) {
       throw new Error('PNG 이미지만 제출할 수 있습니다.');
     }
-    const fileName = studentNumber + '_' + puzzleNumber + '.png';
+    const fileName = studentName + '_(' + puzzleNumber + ').png';
     const boundary = 'puzzle_' + requestId.replace(/-/g, '');
     const metadata = JSON.stringify({ name: fileName, mimeType: 'image/png', parents: [FOLDER_ID] });
     const prefix = Utilities.newBlob('--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + metadata +

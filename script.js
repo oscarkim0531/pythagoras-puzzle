@@ -275,10 +275,10 @@ $('#confirm-accept').addEventListener('click', () => {
 });
 $('#confirm-dialog').addEventListener('cancel', () => { state.pendingAction = null; });
 
-function currentFileName(studentNumber) { return `${studentNumber}_${state.level + 1}.png`; }
+function currentFileName(studentName) { return `${studentName}_(${state.level + 1}).png`; }
 function updateFileName() {
-  const number = $('#student-number').value.trim();
-  $('#submit-file-name').textContent = number ? `파일명: ${currentFileName(number)}` : `파일명: 학번_${state.level + 1}.png`;
+  const name = $('#student-name').value.trim();
+  $('#submit-file-name').textContent = name ? `파일명: ${currentFileName(name)}` : `파일명: 이름_(${state.level + 1}).png`;
 }
 
 const imageDataCache = new Map();
@@ -331,7 +331,7 @@ async function puzzlePngDataUrl() {
   });
 }
 
-function uploadViaForm(payload, studentNumber, requestId, target) {
+function uploadViaForm(payload, studentName, requestId, target) {
   const endpoint = window.SUBMISSION_ENDPOINT;
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(endpoint || '')) {
     throw new Error('드라이브 제출 연결이 준비되지 않았습니다.');
@@ -339,7 +339,7 @@ function uploadViaForm(payload, studentNumber, requestId, target) {
   const form = document.createElement('form');
   form.method = 'POST'; form.action = endpoint; form.target = target; form.hidden = true;
   const fields = {
-    payload, studentNumber, puzzleNumber: String(state.level + 1),
+    payload, studentName, puzzleNumber: String(state.level + 1),
     requestId, origin: location.origin,
   };
   Object.entries(fields).forEach(([key, value]) => {
@@ -361,9 +361,9 @@ function finishUpload() {
 $('#submit-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (state.upload) return;
-  const studentNumber = $('#student-number').value.trim();
-  if (!/^[0-9]{1,12}$/.test(studentNumber)) {
-    $('#submit-error').textContent = '학번은 숫자로 입력해 주세요.';
+  const studentName = $('#student-name').value.trim();
+  if (!studentName || studentName.length > 40 || /[/\\\u0000-\u001f]/u.test(studentName)) {
+    $('#submit-error').textContent = '이름을 40자 이내로 입력해 주세요. /와 \\는 사용할 수 없습니다.';
     return;
   }
   $('#submit-error').textContent = '';
@@ -382,12 +382,12 @@ $('#submit-form').addEventListener('submit', async (event) => {
     finishUpload();
     $('#submit-error').textContent = '제출을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.';
   }, 45000);
-  state.upload = { requestId, timeout, studentNumber, level: state.level, popup };
+  state.upload = { requestId, timeout, studentName, level: state.level, popup };
   try {
     const payload = await puzzlePngDataUrl();
     if (state.upload?.requestId !== requestId) return;
     if (popup.closed) throw new Error('제출 창이 닫혔습니다. 다시 시도해 주세요.');
-    uploadViaForm(payload, studentNumber, requestId, popupName);
+    uploadViaForm(payload, studentName, requestId, popupName);
   } catch (error) {
     if (state.upload?.requestId !== requestId) return;
     clearTimeout(timeout);
@@ -401,7 +401,7 @@ window.addEventListener('message', (event) => {
   if (!trustedUploadOrigin(event.origin) || !state.upload) return;
   const message = event.data;
   if (!message || message.type !== 'pythagoras-upload' || message.requestId !== state.upload.requestId) return;
-  const { studentNumber, level, timeout, popup } = state.upload;
+  const { studentName, level, timeout, popup } = state.upload;
   clearTimeout(timeout);
   popup.close();
   finishUpload();
@@ -410,7 +410,7 @@ window.addEventListener('message', (event) => {
     return;
   }
   $('#submit-dialog').close();
-  $('#submitted-copy').textContent = `${studentNumber}_${level + 1}.png 파일을 제출했습니다.`;
+  $('#submitted-copy').textContent = `${studentName}_(${level + 1}).png 파일을 제출했습니다.`;
   $('#submitted-dialog').showModal();
   $('#game-status').textContent = '퍼즐 이미지 제출이 완료됐습니다.';
 });
@@ -421,13 +421,13 @@ document.querySelectorAll('.level-card').forEach((card) => card.addEventListener
 $('#game-levels').addEventListener('click', () => askConfirmation('퍼즐 목록으로 돌아가면 현재 조각 배치가 초기화됩니다.', '이동', () => showScreen('select')));
 $('#game-reset').addEventListener('click', () => askConfirmation('현재 퍼즐의 조각과 시간을 처음부터 다시 시작합니다.', '다시 시작', () => beginLevel(state.level)));
 $('#submit-button').addEventListener('click', () => {
-  $('#student-number').value = '';
+  $('#student-name').value = '';
   $('#submit-error').textContent = '';
   updateFileName();
   $('#submit-dialog').showModal();
-  $('#student-number').focus();
+  $('#student-name').focus();
 });
-$('#student-number').addEventListener('input', updateFileName);
+$('#student-name').addEventListener('input', updateFileName);
 $('#submit-cancel').addEventListener('click', () => { if (!state.upload) $('#submit-dialog').close(); });
 $('#submit-dialog').addEventListener('cancel', (event) => { if (state.upload) event.preventDefault(); });
 $('#submitted-close').addEventListener('click', () => $('#submitted-dialog').close());

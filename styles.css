@@ -31,11 +31,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 
 [hidden] { display: none !important; }
 
-.app-shell { min-height: 100svh; padding: 28px; display: grid; place-items: center; }
+.app-shell { min-height: 100svh; padding: 24px; display: grid; place-items: center; }
 
 .screen {
-  width: min(1180px, 100%);
-  min-height: min(800px, calc(100svh - 56px));
+  width: min(1040px, 100%);
+  min-height: min(760px, calc(100svh - 48px));
   background: var(--paper);
   border: 1px solid #e7e2da;
   border-radius: 28px;
@@ -113,8 +113,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .game-instruction, .game-footnote { text-align: center; color: var(--muted); line-height: 1.5; font-size: .91rem; }
 .game-instruction { margin: 18px 16px 0; }
 .game-footnote { margin: 8px 16px 0; font-size: .78rem; }
-.puzzle-wrap { width: min(100%, 850px); margin: auto; padding: 5px 22px 0; }
-.puzzle-stage { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.puzzle-wrap { display: flex; justify-content: center; width: 100%; margin: auto; padding: 5px 22px 0; }
+.puzzle-stage { display: block; width: 100%; height: auto; max-width: min(615px, 56svh); touch-action: none; user-select: none; -webkit-user-select: none; }
 .source-piece { cursor: grab; filter: drop-shadow(0 2px 1px #39342e2b); }
 .source-piece:active, .source-piece.is-dragging { cursor: grabbing; filter: drop-shadow(0 10px 7px #39342e4a); }
 
@@ -150,6 +150,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
   .timer { min-width: 58px; min-height: 35px; padding: 0 5px; font-size: .78rem; }
   .game-instruction { font-size: .82rem; margin-top: 13px; }
   .puzzle-wrap { width: 100%; padding: 0 5px; }
+  .puzzle-stage { max-width: none; }
   .game-footnote { margin-top: 0; }
   .piece-controls { gap: 5px; padding: 8px; }
   .selected-piece-label { width: 100%; }
